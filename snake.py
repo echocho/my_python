@@ -21,20 +21,19 @@ carryOn = True
 
 clock = pygame.time.Clock()
 
-x = 10
-y = 10
+# set the first snake rect
+x = 80
+y = 80
 
 # set the snake length
-while x <= 80:
+while x <= 160:
     x += 10
     bodyList.append((x, y)) 
 
-# draw food
-food_x = random.randint(0, 800)
-food_y = random.randint(0, 800)
-pygame.draw.rect(screen, RED, [food_x, food_y, 10, 10])
+# set food
+food_x = random.randint(20, 770)
+food_y = random.randint(20, 770)
 foodList.append((food_x, food_y))
-
 
 while carryOn:
     for event in pygame.event.get():
@@ -42,6 +41,13 @@ while carryOn:
             carryOn = False
     
     screen.fill(BLACK)
+    
+    # draw border
+    pygame.draw.rect(screen, GREEN, [0, 0, 800, 20])
+    pygame.draw.rect(screen, GREEN, [0, 0, 20, 800])
+    pygame.draw.rect(screen, GREEN, [0, 780, 800, 20])
+    pygame.draw.rect(screen, GREEN, [780, 0, 20, 800])
+
 
     keys = pygame.key.get_pressed()
 
@@ -80,8 +86,8 @@ while carryOn:
     while (food_x, food_y) in bodyList or food_x % 10 != 0 or food_y % 10 != 0:
         if (food_x, food_y) in bodyList:
             bodyList.append((food_x, food_y))
-        food_x = random.randint(0, 800)
-        food_y = random.randint(0, 800)
+        food_x = random.randint(20, 770)
+        food_y = random.randint(20, 770)
         foodList.pop(0)
         foodList.append((food_x, food_y))
 
@@ -91,6 +97,12 @@ while carryOn:
     for i in range(0, len(bodyList)):
         pygame.draw.rect(screen, WHITE, [bodyList[i][0], bodyList[i][1], 10, 10])
     
+    for q in range(0, len(bodyList)):
+        if bodyList[q][0] < 20 or bodyList[q][0] >= 780 or bodyList[q][1] < 20 or bodyList[q][1] >= 780:
+            carryOn = False
+            print('Game Over')
+            print('Final Score: ', len(bodyList)-9)
+
     print('after eating: ', len(bodyList))
     print(bodyList)
     print(foodList)
