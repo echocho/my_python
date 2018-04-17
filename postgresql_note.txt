@@ -1,0 +1,94 @@
+OLAP(窗口函数)大体分两种：
+能作为窗口函数使用的聚合函数（sum, avg, count, max, min)
+rank, dense_rank, row_number, etc.专用窗口函数
+并只能写在select句子中
+
+    partition by: 设定排序范围的对象；横向分组；
+    order by: 指定按照哪一行、什么顺序进行排序；纵向排序
+
+        COMPARE:
+        select product_name, product_type, sale_price,
+            rank () over (partition by product_type
+                            order by sale_price) as ranking
+        from Product;
+        AND
+        select product_name, product_type, sale_price,
+            rank () over (order by sale_price) as ranking
+        from Product;
+
+
+    Ranking中若存在相同位次的记录：
+    rank: 1,1,1,4
+    dense_rank: 1,1,1,2
+    row_number: 1,2,3,4
+        COMPARE: 
+        select product_name, product_type, sale_price,
+            rank () over (order by sale_price) as ranking,
+            dense_rank () over (order by sale_price) as dense_ranking,
+            row_number () over (order by sale_price) as row_num
+        from Product;
+
+    累计, SEE:
+    select product_id, product_name, sale_price, 
+        sum(sale_price) over (order by product_id) as current_sum
+    from Product;
+
+    移动平均(moving average), 在希望实时把握“最近状态”时比较方便，如跟踪股市趋势时常用。
+    限定汇总对象，可用rows和preceding两个关键字设定框架-“包括自己（当前行在内地的）前三行”，SEE：
+        select product_id, product_name, sale_price, 
+                avg(sale_price) over (order by product_id
+                                        rows 2 preceding) as moving_avg
+        from Product;
+
+        COMPARE WITH 区间为“自身+自身前一行+自身后一行”的汇总对象，使用了关键字following, between:
+        select product_id, product_name, sale_price,
+                avg(sale_price) over (order by product_id
+                                    rows between 1 preceding and 
+                                    1 following) as moving_avg
+        from Product;
+
+
+Grouping运算符包含3种: 
+rollup; cube; grouping sets
+
+    一般情况下，若要算出合计，采用union all方法，但效率不高：
+    select '合计' as product_type, sum(sale_price)
+        from Product
+    union all
+    select product_type, sum(sale_price)
+        from Product
+    group by product_type;
+
+    可用rollup代替(可同时得出合计和小计）, SEE:
+        select product_type, sum(sale_price) as sum_price
+        from Product
+        group by rollup(product_type);
+
+    用grouping函数分辨null为超级分组记录或其他情况:
+        select grouping(product_type) as product_type,
+                grouping(regist_date) as regist_date, sum(sale_price) as sum_price
+        from Product
+        group by rollup(product_type, regist_date);
+        COMPARE WITH: 
+        select case when grouping(product_type) = 1
+                    then '商品种类 合计'
+                    else product_type end as product_type,
+            case when grouping(regist_date) =  1
+                    then '登记日期 合计'
+                    else cast(regist_date as varchar(16)) end as regist_date,
+                sum(sale_price) as sum_price
+        from Product
+        group by rollup(product_type, regist_date);
+
+    Cube，是将group by子句中聚合键中所有“所有可能的组合”的汇总结果集中到一个结果中。
+        select case when grouping(product_type) = 1
+                    then '商品种类 合计'
+                    else product_type end as product_type,
+            case when grouping(regist_date) =  1
+                    then '登记日期 合计'
+                    else cast(regist_date as varchar(16)) end as regist_date,
+                sum(sale_price) as sum_price
+        from Product
+        group by cube(product_type, regist_date);
+
+    grouping sets可以从rollup或cube的结果中去除部分记录，但不常用。
