@@ -1,6 +1,14 @@
-import pygame, random
+import pygame, random, copy
 pygame.init()
 
+# -------------------
+# -------------------
+# CUSTOMIZED AREA
+GAME_AREA_SIZE = (800, 800)
+FOOD_AREA_WIDE = 20
+FOOD_AREA_HEIGHT = 760
+SNAKE_RECT_LEN = 10
+INITIAL_SNAKE_LEN = 360
 BLACK = (0, 0, 0)
 GREEN = (20, 255, 140)
 GREY = (210, 210, 210)
@@ -11,30 +19,34 @@ YELLOW = (255, 255, 0)
 CYAN = (0, 255, 255)
 BLUE = (100, 100, 255)
 
-size = (800, 800)
-screen = pygame.display.set_mode(size)
-
-bodyList = []
-foodList = []
-        
+# FIXME: will fix dotted snake when change of speed
+SPEED = 10
+# -------------------
+# -------------------
+screen = pygame.display.set_mode(GAME_AREA_SIZE)
 carryOn = True
-
 clock = pygame.time.Clock()
 
+# bodyList to keep record of positions every rect of the snake
+bodyList = []
+# foodList to record position of the food
+foodList = []
+
 # set the first snake rect
-x = 80
-y = 80
+initial_tail_x_pos = 80
+initial_tail_y_pos = 80
 
-# set the snake length
-while x <= 160:
-    x += 10
-    bodyList.append((x, y)) 
+# duplicating intial tail as initial snake length:
+while initial_tail_x_pos < INITIAL_SNAKE_LEN:
+    initial_tail_x_pos += SNAKE_RECT_LEN
+    bodyList.append((initial_tail_x_pos, initial_tail_y_pos)) 
 
-# set food
-food_x = random.randint(20, 770)
-food_y = random.randint(20, 770)
-foodList.append((food_x, food_y))
+  # set food
+food_x_pos = random.randint(FOOD_AREA_WIDE, FOOD_AREA_HEIGHT)
+food_y_pos = random.randint(FOOD_AREA_WIDE, FOOD_AREA_HEIGHT)
+foodList.append((food_x_pos, food_y_pos))
 
+# main program loop
 while carryOn:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -48,64 +60,59 @@ while carryOn:
     pygame.draw.rect(screen, GREEN, [0, 780, 800, 20])
     pygame.draw.rect(screen, GREEN, [780, 0, 20, 800])
 
-
+    #  keys control
     keys = pygame.key.get_pressed()
 
-    head_x = bodyList[-1][0]
-    head_y = bodyList[-1][1]
-    right_new_head_x = head_x + 10
-    right_new_head_y = head_y
-    left_new_head_x = head_x - 10
-    left_new_head_y = head_y
-    up_new_head_x = head_x
-    up_new_head_y = head_y - 10
-    down_new_head_x = head_x
-    down_new_head_y = head_y + 10
+    head_x_pos = bodyList[-1][0]
+    head_y_pos = bodyList[-1][1]
 
     if keys[pygame.K_RIGHT]:
+        head_x_pos += SPEED
         bodyList.pop(0)
-        bodyList.append((right_new_head_x, right_new_head_y))
-        
+        bodyList.append((head_x_pos, head_y_pos))
 
     if keys[pygame.K_LEFT]:
+        head_x_pos -= SPEED
         bodyList.pop(0)
-        bodyList.append((left_new_head_x, left_new_head_y))
+        bodyList.append((head_x_pos, head_y_pos))
 
     if keys[pygame.K_UP]:
+        head_y_pos -= SPEED
         bodyList.pop(0)
-        bodyList.append((up_new_head_x, up_new_head_y))
+        bodyList.append((head_x_pos, head_y_pos))
 
     if keys[pygame.K_DOWN]:
+        head_y_pos += SPEED
         bodyList.pop(0)
-        bodyList.append((down_new_head_x, down_new_head_y))
+        bodyList.append((head_x_pos, head_y_pos))
 
-    
-    # generate new food after snake eats it
-    # better use sprite collision!! 
-
-    while (food_x, food_y) in bodyList or food_x % 10 != 0 or food_y % 10 != 0:
-        if (food_x, food_y) in bodyList:
-            bodyList.append((food_x, food_y))
-        food_x = random.randint(20, 770)
-        food_y = random.randint(20, 770)
+    # set food pool 
+    while (food_x_pos, food_y_pos) in bodyList or food_x_pos % 10 != 0 or food_y_pos % 10 != 0:
+        if (food_x_pos, food_y_pos) in bodyList:
+            bodyList.append((food_x_pos, food_y_pos))
+        food_x_pos = random.randint(FOOD_AREA_WIDE, FOOD_AREA_HEIGHT)
+        food_y_pos = random.randint(FOOD_AREA_WIDE, FOOD_AREA_HEIGHT)
         foodList.pop(0)
-        foodList.append((food_x, food_y))
+        foodList.append((food_x_pos, food_y_pos))
 
-    for m in range(0, len(foodList)):
-        pygame.draw.rect(screen, RED, [foodList[0][0], foodList[0][1], 10, 10])
-    
-    for i in range(0, len(bodyList)):
-        pygame.draw.rect(screen, WHITE, [bodyList[i][0], bodyList[i][1], 10, 10])
-    
-    for q in range(0, len(bodyList)):
-        if bodyList[q][0] < 20 or bodyList[q][0] >= 780 or bodyList[q][1] < 20 or bodyList[q][1] >= 780:
+    # draw food -- there's always only one food in foodList
+    pygame.draw.rect(screen, RED, [foodList[0][0], foodList[0][1], 10, 10])
+
+    # draw snake 
+    for (snake_rect_x_pos, snake_rect_y_pos) in bodyList:
+        pygame.draw.rect(screen, WHITE, [snake_rect_x_pos, snake_rect_y_pos, 10, 10])
+
+    # check if snake hits border
+    for (snake_rect_x_pos, snake_rect_y_pos) in bodyList:
+        if snake_rect_x_pos < FOOD_AREA_WIDE or snake_rect_x_pos >= FOOD_AREA_HEIGHT or snake_rect_y_pos < FOOD_AREA_WIDE or snake_rect_y_pos >= FOOD_AREA_HEIGHT:
+            print('hit border-game over')
             carryOn = False
-            print('Game Over')
-            print('Final Score: ', len(bodyList)-9)
 
-    print('after eating: ', len(bodyList))
-    print(bodyList)
-    print(foodList)
+    # check if snake hits itself:
+    if bodyList[-1] in bodyList[:-2]:
+        print('hit itself-game over')
+        carryOn = False
+
     pygame.display.flip()
     clock.tick(60)
 
